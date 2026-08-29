@@ -1,0 +1,32 @@
+name: Dispatch IPA from issue
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  dispatch:
+    if: startsWith(github.event.issue.title, '[build-ipa]')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      issues: write
+      contents: read
+    steps:
+      - name: Dispatch ipa.yml
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IPA_URL: ${{ github.event.issue.body }}
+        run: |
+          set -euo pipefail
+          URL=$(printf '%s\n' "$IPA_URL" | tr -d '\r' | head -n 1 | xargs)
+          gh workflow run ipa.yml --repo "$GITHUB_REPOSITORY" \
+            -f "ipa_url=${URL}" \
+            -f display_name=YouTube \
+            -f bundle_id=com.google.ios.youtube \
+            -f repo=Formoso705/YouMod \
+            -f branch=main
+      - name: Close trigger issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh issue close "${{ github.event.issue.number }}" --repo "$GITHUB_REPOSITORY" --comment "IPA build dispatched."
